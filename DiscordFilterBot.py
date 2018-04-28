@@ -1,5 +1,5 @@
 ################# Discord Filter Bot                 #################
-################# Version: 2.02                      #################
+################# Version: 2.03                      #################
 ################# ---------------------------------- #################
 ################# Written by TheRadziu for Spoopy <3 #################
 ################# Only edit Settings below and       #################
@@ -19,7 +19,7 @@ import asyncio
 import platform
 import time
 from datetime import datetime
-import ctypes
+import os
 
 ### Check if discord library is installed
 try:
@@ -38,8 +38,10 @@ def current_time():
 bl_phrases =  set(open('./' + blacklist_file).read().split())
 bl_phrases = list(map(lambda x: x.lower(), bl_phrases))
 
-### Set window's title
-ctypes.windll.kernel32.SetConsoleTitleW("FilterBot 2.0 by TheRadziu")
+### Set window's title on windows machines
+if os.name == 'nt':
+	import ctypes
+	ctypes.windll.kernel32.SetConsoleTitleW("FilterBot 2.0 by TheRadziu")
 
 client = discord.Client()
 already_connected = False
@@ -93,6 +95,9 @@ is_offline = False
 while True:
 	try:
 		client.loop.run_until_complete(client.start(bot_token))
+	except KeyboardInterrupt:
+		print(current_time() + 'Pressed Ctrl+C! Quitting FilterBot 2!')
+		exit()
 	except BaseException:
 		if not is_offline:
 			print(current_time() +'Disconnected! Attempting reconnect every {} seconds!'.format(reconnect_every_sec))
