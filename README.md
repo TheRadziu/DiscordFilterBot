@@ -23,7 +23,7 @@ reporting_channel_id = Channel_id_here
 ; Bot will display this as Playing status. Set to off to disable status
 playing_status = Example playing status
 ; Message that will be sent in the same channel as the message that was detected. You can use @user for mention the person who sent detected message.
-message_on_trigger = Hey! @user Please do not link to the VP subreddit or anything containing copyright material!
+message_on_trigger = Hey! @user Please do not link to anything containing copyright material!
 ; On connection failure bot will try to reconnect every set amount of seconds.
 reconnect_every_sec = 5
 
