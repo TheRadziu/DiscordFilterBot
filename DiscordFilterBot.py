@@ -1,25 +1,17 @@
-################# Discord Filter Bot                 #################
-################# Version: 2.03                      #################
-################# ---------------------------------- #################
 ################# Written by TheRadziu for Spoopy <3 #################
-################# Only edit Settings below and       #################
-################# selected blacklist_file itself     #################
+################# Script Version: 2.04               #################
 
-### Settings ###
-more_info = False # [True/False] If enabled displays more info on bot start.
-reports = True # [True/False] If enabled sends a report about message being deleted [who posted it in which channel] to channel set below
-reporting_channel_id = Channel_id_here # ID of the channel where reports will be sent. Needs reports set to True
-bot_token = 'BOT TOKEN' # Paste your bot token here.
-playing_status = 'PLAYING STATUS HERE' # Bot will display this as Playing status.
-blacklist_file = 'blacklist.txt' # File with forbidden phrases, mainly used for banning certain domains from discord server.
-reconnect_every_sec = 5 # on connection failure bot will try to reconnect every set amount of secounds.
-
-############# Code Starts here - Do not touch #############
 import asyncio
 import platform
 import time
 from datetime import datetime
-import os
+import os, os.path
+import configparser
+
+### Current date function
+def current_time():
+	ctime = datetime.now().strftime('[%H:%M:%S] ')
+	return ctime
 
 ### Check if discord library is installed
 try:
@@ -28,24 +20,32 @@ except ImportError:
 	print('Discord library is not installed! Please run this command to install it!:')
 	print('python -m pip install -U discord.py')
 	exit()
+	
+### Check if config.ini exists
+if os.path.isfile('config.ini') and os.path.getsize('config.ini') > 0:
+	pass
+else:
+	print(current_time() + 'ERROR! config.ini file is missing or empty!')
+	quit()
 
-### Current date function
-def current_time():
-	ctime = datetime.now().strftime('[%H:%M:%S] ')
-	return ctime
+### Load external configuration file
+config = configparser.ConfigParser(allow_no_value=True)
+try:
+	config.read('config.ini')
+except Exception as err:
+	print(current_time() + 'ERROR! config.ini file is corrupted!')
+	quit()
 
-### Load and parse blacklist_file
-bl_phrases =  set(open('./' + blacklist_file).read().split())
-bl_phrases = list(map(lambda x: x.lower(), bl_phrases))
+### Load and parse blacklist
+bl_phrases = [option for option in config['BLACKLIST']]
 
 ### Set window's title on windows machines
 if os.name == 'nt':
 	import ctypes
-	ctypes.windll.kernel32.SetConsoleTitleW("FilterBot 2.0 by TheRadziu")
+	ctypes.windll.kernel32.SetConsoleTitleW("FilterBot 2 by TheRadziu")
 
 client = discord.Client()
 already_connected = False
-
 
 ### On bot run:
 @client.event
@@ -55,7 +55,7 @@ async def on_ready():
 		print('\nWelcome to the FilterBot 2\n')
 		print('Your selected banned phrases are:')
 		print(bl_phrases)
-		if more_info:
+		if config.getboolean('SETTINGS', 'more_info'):
 			print('--------')
 			print('Current Discord.py Version: {} | Current Python Version: {}'.format(discord.__version__, platform.python_version()))
 			print('--------')
@@ -70,36 +70,40 @@ async def on_ready():
 	else:
 		print(current_time() + 'Successfuly reconnected!')
 		
-	#Set Playing as:
-	return await client.change_presence(game=discord.Game(name=playing_status))
+	#Set Playing as if not disabled:
+	if config['SETTINGS']['playing_status'] != 'off':
+		return await client.change_presence(game=discord.Game(name=config['SETTINGS']['playing_status']))
+	else:
+		await client.change_presence(game=None)
 
 ### Main Bot's code, everything happens in here
 @client.event
 async def on_message(message):
 	if any(word in message.content.lower() for word in bl_phrases):
 		###Report it to different channel and console if enabled:
-		if reports:
-			reporting_channel = client.get_channel("{}".format(reporting_channel_id))
+		if config.getboolean('SETTINGS', 'reports'):
+			reporting_channel = client.get_channel("{}".format(config['SETTINGS']['reporting_channel_id']))
 			await client.send_message(destination=reporting_channel, content='Removed message by %s in channel #%s' % (message.author, message.channel))
+		### Print log in console:
 		print(current_time() + 'Removed message - %s : %s' % (message.author, message.content))
 		### Remove the message which triggered the bot	
 		await client.delete_message(message)
-		### Send reply/notification with mention
+		### Send reply/notification
 		mention = '{0.author.mention}'.format(message)
-		await client.send_message(message.channel, 'Hey! ' + mention + ' Please do not link to anything containing copyright material!')
+		await client.send_message(message.channel, config['SETTINGS']['message_on_trigger'].replace("@user", mention, 1))
 	elif message.content.startswith('???creator'):
-		await client.send_message(message.channel, 'FilterBot 2 created by TheRadziu :joy:')
+		await client.send_message(message.channel, 'FilterBot 2.0 created by TheRadziu :joy:')
 
 ### Actually run the bot and try to reconnect on fail/disconnect
 is_offline = False
 while True:
 	try:
-		client.loop.run_until_complete(client.start(bot_token))
+		client.loop.run_until_complete(client.start(config['LOGIN']['bot_token']))
 	except KeyboardInterrupt:
 		print(current_time() + 'Pressed Ctrl+C! Quitting FilterBot 2!')
 		exit()
 	except BaseException:
 		if not is_offline:
-			print(current_time() +'Disconnected! Attempting reconnect every {} seconds!'.format(reconnect_every_sec))
+			print(current_time() +'Disconnected! Attempting reconnect every {} seconds!'.format(config['SETTINGS']['reconnect_every_sec']))
 			is_offline = True
-		time.sleep(reconnect_every_sec)
+		time.sleep(int(config['SETTINGS']['reconnect_every_sec']))
