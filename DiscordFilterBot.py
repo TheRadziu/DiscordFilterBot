@@ -79,11 +79,13 @@ async def on_ready():
 ### Main Bot's code, everything happens in here
 @client.event
 async def on_message(message):
+	if message.author == client.user:
+		return
 	if any(word in message.content.lower() for word in bl_phrases):
 		###Report it to different channel and console if enabled:
 		if config.getboolean('SETTINGS', 'reports'):
 			reporting_channel = client.get_channel("{}".format(config['SETTINGS']['reporting_channel_id']))
-			await client.send_message(destination=reporting_channel, content='Removed message by %s in channel #%s' % (message.author, message.channel))
+			await client.send_message(destination=reporting_channel, content='Message from %s removed in channel #%s, message content: %s' % (message.author, message.channel, message.content))
 		### Print log in console:
 		print(current_time() + 'Removed message - %s : %s' % (message.author, message.content))
 		### Remove the message which triggered the bot	
